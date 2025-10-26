@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>FinTrack — Dashboard Keuangan Modern</title>
+  <link rel="stylesheet" href="./assets/tailwind.css" />
+  <script type="importmap">
+    { "imports": { "vue": "./assets/vue.esm-browser.js" } }
+  </script>
+
+  <style>
+    body {
+      background: radial-gradient(circle at top left, #3a0ca3, #000000);
+      color: #f1f1f1;
+      font-family: "Poppins", sans-serif;
+      transition: background 0.5s ease;
+      min-height: 100vh;
+    }
+
+    .card {
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(12px);
+      border-radius: 1rem;
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+      transition: all 0.3s ease-in-out;
+    }
+
+    .card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 10px 30px rgba(162, 93, 255, 0.4);
+    }
+
+    .btn {
+      background: linear-gradient(90deg, #7209b7, #560bad);
+      color: white;
+      font-weight: 600;
+      transition: all 0.25s ease;
+      box-shadow: 0 4px 15px rgba(114, 9, 183, 0.5);
+    }
+
+    .btn:hover {
+      background: linear-gradient(90deg, #9d4edd, #7209b7);
+      transform: scale(1.05);
+      box-shadow: 0 6px 20px rgba(157, 78, 221, 0.6);
+    }
+
+    .btn:active {
+      transform: scale(0.94);
+      filter: brightness(0.9);
+    }
+
+    .fade-in {
+      animation: fadeIn 0.6s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .text-gradient {
+      background: linear-gradient(90deg, #c77dff, #9d4edd, #7b2cbf);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    table {
+      color: #e9e9e9;
+    }
+
+    input, select {
+      background: rgba(255, 255, 255, 0.08);
+      color: #fff;
+    }
+
+    input::placeholder {
+      color: #aaa;
+    }
+
+    th {
+      color: #bdb2ff;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="app" class="max-w-5xl mx-auto p-6 space-y-8 fade-in">
+    <!-- Header -->
+    <header class="flex items-center justify-between">
+      <h1 class="text-3xl font-extrabold text-gradient">💰 FinTrack Dashboard</h1>
+      <button
+        @click="resetDemo"
+        class="px-3 py-2 rounded-lg text-sm btn"
+      >🔄 Reset Demo</button>
+    </header>
+
+    <!-- Ringkasan -->
+    <section class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div class="card p-5 text-center">
+        <h3 class="text-xs uppercase text-gray-400">Pemasukan</h3>
+        <p class="text-2xl font-semibold text-green-400">Rp {{ formatCurrency(income) }}</p>
+      </div>
+      <div class="card p-5 text-center">
+        <h3 class="text-xs uppercase text-gray-400">Pengeluaran</h3>
+        <p class="text-2xl font-semibold text-red-400">Rp {{ formatCurrency(expense) }}</p>
+      </div>
+      <div class="card p-5 text-center">
+        <h3 class="text-xs uppercase text-gray-400">Saldo</h3>
+        <p class="text-2xl font-semibold text-indigo-300">Rp {{ formatCurrency(income - expense) }}</p>
+      </div>
+    </section>
+
+    <!-- Form -->
+    <section class="card p-6">
+      <form @submit.prevent="addTx" class="grid grid-cols-1 md:grid-cols-6 gap-3 items-end">
+        <select v-model="form.type" class="border rounded-lg p-2 focus:ring-2 focus:ring-purple-400">
+          <option value="income">Pemasukan</option>
+          <option value="expense">Pengeluaran</option>
+        </select>
+        <input v-model="form.category" placeholder="Kategori" class="border rounded-lg p-2 focus:ring-2 focus:ring-purple-400" required />
+        <input v-model.number="form.amount" type="number" min="0" placeholder="Jumlah" class="border rounded-lg p-2 focus:ring-2 focus:ring-purple-400" required />
+        <input v-model="form.date" type="date" class="border rounded-lg p-2 focus:ring-2 focus:ring-purple-400" required />
+        <button type="submit" class="btn rounded-lg px-4 py-2 shadow-md">
+          ➕ Tambah
+        </button>
+      </form>
+    </section>
+
+    <!-- Tabel -->
+    <section class="card overflow-hidden">
+      <table class="w-full text-sm">
+        <thead class="bg-opacity-20 bg-purple-700 text-gray-100">
+          <tr>
+            <th class="text-left p-3">Tanggal</th>
+            <th class="text-left p-3">Jenis</th>
+            <th class="text-left p-3">Kategori</th>
+            <th class="text-right p-3">Jumlah</th>
+            <th class="p-3 w-24"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="tx in transactions" :key="tx.id" class="border-t border-purple-900 hover:bg-purple-900/30 transition-all">
+            <td class="p-3">{{ tx.date }}</td>
+            <td class="p-3">
+              <span :class="tx.type==='income' ? 'text-green-400' : 'text-red-400'">{{ tx.type }}</span>
+            </td>
+            <td class="p-3">{{ tx.category }}</td>
+            <td class="p-3 text-right font-medium">Rp {{ formatCurrency(tx.amount) }}</td>
+            <td class="p-3 text-right">
+              <button @click="removeTx(tx.id)" class="text-red-400 hover:text-red-500 transition">🗑️</button>
+            </td>
+          </tr>
+          <tr v-if="transactions.length === 0">
+            <td colspan="5" class="p-6 text-center text-gray-400">Belum ada transaksi</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+  </div>
+
+  <!-- Suara -->
+  <audio id="addSound" src="./assets/add.mp3"></audio>
+  <audio id="deleteSound" src="./assets/delete.mp3"></audio>
+
+  <script type="module">
+    import { createApp } from "vue";
+
+    createApp({
+      data() {
+        return {
+          transactions: JSON.parse(localStorage.getItem("transactions") || "[]"),
+          form: {
+            type: "income",
+            category: "",
+            amount: null,
+            date: new Date().toISOString().split("T")[0],
+          },
+        };
+      },
+      computed: {
+        income() {
+          return this.transactions.filter(t => t.type === "income")
+            .reduce((s, t) => s + t.amount, 0);
+        },
+        expense() {
+          return this.transactions.filter(t => t.type === "expense")
+            .reduce((s, t) => s + t.amount, 0);
+        },
+      },
+      methods: {
+        formatCurrency(v) {
+          return v.toLocaleString("id-ID");
+        },
+        saveData() {
+          localStorage.setItem("transactions", JSON.stringify(this.transactions));
+        },
+        addTx() {
+          const s = document.getElementById("addSound");
+          s.currentTime = 0;
+          s.play();
+
+          this.transactions.push({
+            id: Date.now(),
+            ...this.form,
+            amount: Number(this.form.amount),
+          });
+          this.saveData();
+          this.form.category = "";
+          this.form.amount = "";
+        },
+        removeTx(id) {
+          const s = document.getElementById("deleteSound");
+          s.currentTime = 0;
+          s.play();
+
+          this.transactions = this.transactions.filter(t => t.id !== id);
+          this.saveData();
+        },
+        resetDemo() {
+          this.transactions = [];
+          localStorage.removeItem("transactions");
+        },
+      },
+    }).mount("#app");
+  </script>
+</body>
+</html>
